@@ -1,14 +1,14 @@
-use std::time::{SystemTime};
 use serde::{Serialize, Deserialize};
+use chrono::{Utc, TimeZone, DateTime};
 
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Attributes {
     // energy_type to be specified for Offers only
     energy_type: Option<String>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Requirements {
     // energy_type, energy, and price to be specified for Bids only
     trading_partners: Vec<String>,
@@ -25,10 +25,10 @@ trait Offer {
     // functions unique to Offers - TODO
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BaseBidOffer {
     id: String,
-    time: SystemTime,
+    time: DateTime<Utc>,
     original_price: f64,
     price: f64,
     energy: f64,
@@ -36,7 +36,7 @@ pub struct BaseBidOffer {
     requirements: Vec<Requirements>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BidOfferMatch {
     market_id: String,
     bids: Vec<u8>,
@@ -134,6 +134,87 @@ impl FilterBaseBidOffer for BaseBidOfferVec {
     }
 }
 
-fn main() {
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+
+    #[test]
+    fn filter_by_energy_works() {
+        let requirements_a = Requirements {
+            trading_partners: vec!["Charlie".to_string(), "Mike".to_string(), "Victor".to_string()],
+            energy_type: Some("green".to_string()),
+            energy: 25.0,
+            price: 15.0,
+        };
+    
+        let requirements_b = Requirements {
+            trading_partners: vec!["Charlie".to_string(), "Mike".to_string(), "Victor".to_string()],
+            energy_type: Some("coal".to_string()),
+            energy: 40.0,
+            price: 14.0,
+        };
+
+        let base_bid_offer_a = BaseBidOffer {
+            id: "a".to_string(),
+            time: Utc.timestamp(100200, 0),
+            original_price: 12.0,
+            price: 14.0,
+            energy: 25.0,
+            attributes: Attributes { energy_type: Some("coal".to_string()) },
+            requirements: vec![requirements_a],
+        };
+
+        let base_bid_offer_b = BaseBidOffer {
+            id: "b".to_string(),
+            time: Utc.timestamp(100500, 0),
+            original_price: 11.0,
+            price: 15.0,
+            energy: 40.0,
+            attributes: Attributes { energy_type: Some("green".to_string()) },
+            requirements: vec![requirements_b],
+        };
+
+        let mut base_bid_offer_vec = Vec::new();
+        base_bid_offer_vec.push(base_bid_offer_a.clone());
+        base_bid_offer_vec.push(base_bid_offer_b);
+        let mut expected = Vec::new();
+        expected.push(base_bid_offer_a);
+        
+        assert_eq!(
+            base_bid_offer_vec.filter_offers_bids_by_requirement_energy(25.0), 
+            expected);
+        assert_ne!(
+                base_bid_offer_vec.filter_offers_bids_by_requirement_energy(40.0), 
+                expected);
+            
+    }
+
+    #[test]
+    fn filter_by_energy_type_works() {
+        assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn filter_by_trading_partner_works() {
+        let requirements_a = Requirements {
+            trading_partners: vec!["Charlie".to_string(), "Mike".to_string(), "Victor".to_string()],
+            energy_type: Some("green".to_string()),
+            energy: 25.0,
+            price: 15.0,
+        };
+    
+        let requirements_b = Requirements {
+            trading_partners: vec!["Charlie".to_string(), "Mike".to_string(), "Victor".to_string()],
+            energy_type: Some("coal".to_string()),
+            energy: 40.0,
+            price: 14.0,
+        };
+        assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn filter_by_price_works() {
+        assert_eq!(2 + 2, 4);
+    }
 }

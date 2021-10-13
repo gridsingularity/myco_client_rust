@@ -61,7 +61,7 @@ impl PayAsBidMatchingAlgorithm for BidOfferMatchVec {
 
 pub trait FilterBaseBidOffer {
     fn filter_offers_bids_by_attribute(&self, attr_val: String) -> Vec<BaseBidOffer>;
-    fn filter_offers_bids_by_requirement_trading_partner(&self, req_val: Vec<String>) -> Vec<BaseBidOffer>;
+    fn filter_offers_bids_by_requirement_trading_partner(&self, req_val: String) -> Vec<BaseBidOffer>;
     fn filter_offers_bids_by_requirement_energy_type(&self, req_val: Option<String>) -> Vec<BaseBidOffer>;
     fn filter_offers_bids_by_requirement_energy(&self, req_val: f64) -> Vec<BaseBidOffer>;
     fn filter_offers_bids_by_requirement_price(&self, req_val: f64) -> Vec<BaseBidOffer>;
@@ -79,14 +79,14 @@ impl FilterBaseBidOffer for BaseBidOfferVec {
         filtered
     }
 
-    fn filter_offers_bids_by_requirement_trading_partner(&self, req_val: Vec<String>) -> Vec<BaseBidOffer> {
+    fn filter_offers_bids_by_requirement_trading_partner(&self, req_val: String) -> Vec<BaseBidOffer> {
         // Iterate over each match's requirements to see if the trading partners matches the query.
         // TODO - how do we compare two lists of trading patners? 
         // Is there only 1 trading partner in the query and we check if it is in the list?
         let mut filtered = Vec::new();
         for bid_offer_match in self.clone() {
             let req = &bid_offer_match.requirements;
-            let iter = req.into_iter().filter(|x| x.trading_partners == req_val).collect::<Vec<&Requirements>>();
+            let iter = req.into_iter().filter(|x| x.trading_partners.contains(&req_val)).collect::<Vec<&Requirements>>();
             if ! iter.is_empty() {
                 filtered.push(bid_offer_match);
             }
@@ -142,14 +142,20 @@ mod tests {
     #[test]
     fn filter_by_energy_works() {
         let requirements_a = Requirements {
-            trading_partners: vec!["Charlie".to_string(), "Mike".to_string(), "Victor".to_string()],
+            trading_partners: vec![
+                "Charlie".to_string(), 
+                "Mike".to_string(), 
+                "Victor".to_string()],
             energy_type: Some("green".to_string()),
             energy: 25.0,
             price: 15.0,
         };
     
         let requirements_b = Requirements {
-            trading_partners: vec!["Charlie".to_string(), "Mike".to_string(), "Victor".to_string()],
+            trading_partners: vec![
+                "Alice".to_string(), 
+                "Bob".to_string(), 
+                "Eve".to_string()],
             energy_type: Some("coal".to_string()),
             energy: 40.0,
             price: 14.0,
@@ -185,36 +191,176 @@ mod tests {
             base_bid_offer_vec.filter_offers_bids_by_requirement_energy(25.0), 
             expected);
         assert_ne!(
-                base_bid_offer_vec.filter_offers_bids_by_requirement_energy(40.0), 
-                expected);
+            base_bid_offer_vec.filter_offers_bids_by_requirement_energy(40.0), 
+            expected);
             
     }
 
     #[test]
     fn filter_by_energy_type_works() {
-        assert_eq!(2 + 2, 4);
-    }
-
-    #[test]
-    fn filter_by_trading_partner_works() {
         let requirements_a = Requirements {
-            trading_partners: vec!["Charlie".to_string(), "Mike".to_string(), "Victor".to_string()],
+            trading_partners: vec![
+                "Charlie".to_string(), 
+                "Mike".to_string(), 
+                "Victor".to_string()],
             energy_type: Some("green".to_string()),
             energy: 25.0,
             price: 15.0,
         };
     
         let requirements_b = Requirements {
-            trading_partners: vec!["Charlie".to_string(), "Mike".to_string(), "Victor".to_string()],
+            trading_partners: vec![
+                "Alice".to_string(), 
+                "Bob".to_string(), 
+                "Eve".to_string()],
             energy_type: Some("coal".to_string()),
             energy: 40.0,
             price: 14.0,
         };
-        assert_eq!(2 + 2, 4);
+
+        let base_bid_offer_a = BaseBidOffer {
+            id: "a".to_string(),
+            time: Utc.timestamp(100200, 0),
+            original_price: 12.0,
+            price: 14.0,
+            energy: 25.0,
+            attributes: Attributes { energy_type: Some("coal".to_string()) },
+            requirements: vec![requirements_a],
+        };
+
+        let base_bid_offer_b = BaseBidOffer {
+            id: "b".to_string(),
+            time: Utc.timestamp(100500, 0),
+            original_price: 11.0,
+            price: 15.0,
+            energy: 40.0,
+            attributes: Attributes { energy_type: Some("green".to_string()) },
+            requirements: vec![requirements_b],
+        };
+
+        let mut base_bid_offer_vec = Vec::new();
+        base_bid_offer_vec.push(base_bid_offer_a.clone());
+        base_bid_offer_vec.push(base_bid_offer_b);
+        let mut expected = Vec::new();
+        expected.push(base_bid_offer_a);
+
+        assert_eq!(
+            base_bid_offer_vec.filter_offers_bids_by_requirement_energy_type(Some("green".to_string())), 
+            expected);
+        assert_ne!(
+            base_bid_offer_vec.filter_offers_bids_by_requirement_energy_type(Some("coal".to_string())), 
+            expected);
+    }
+
+    #[test]
+    fn filter_by_trading_partner_works() {
+        let requirements_a = Requirements {
+            trading_partners: vec![
+                "Charlie".to_string(), 
+                "Mike".to_string(), 
+                "Victor".to_string()],
+            energy_type: Some("green".to_string()),
+            energy: 25.0,
+            price: 15.0,
+        };
+    
+        let requirements_b = Requirements {
+            trading_partners: vec![
+                "Alice".to_string(), 
+                "Bob".to_string(), 
+                "Eve".to_string()],
+            energy_type: Some("coal".to_string()),
+            energy: 40.0,
+            price: 14.0,
+        };
+
+        let base_bid_offer_a = BaseBidOffer {
+            id: "a".to_string(),
+            time: Utc.timestamp(100200, 0),
+            original_price: 12.0,
+            price: 14.0,
+            energy: 25.0,
+            attributes: Attributes { energy_type: Some("coal".to_string()) },
+            requirements: vec![requirements_a],
+        };
+
+        let base_bid_offer_b = BaseBidOffer {
+            id: "b".to_string(),
+            time: Utc.timestamp(100500, 0),
+            original_price: 11.0,
+            price: 15.0,
+            energy: 40.0,
+            attributes: Attributes { energy_type: Some("green".to_string()) },
+            requirements: vec![requirements_b],
+        };
+
+        let mut base_bid_offer_vec = Vec::new();
+        base_bid_offer_vec.push(base_bid_offer_a.clone());
+        base_bid_offer_vec.push(base_bid_offer_b);
+        let mut expected = Vec::new();
+        expected.push(base_bid_offer_a);
+
+        assert_eq!(
+            base_bid_offer_vec.filter_offers_bids_by_requirement_trading_partner("Charlie".to_string()), 
+            expected);
+        assert_ne!(
+            base_bid_offer_vec.filter_offers_bids_by_requirement_trading_partner("Alice".to_string()), 
+            expected);
     }
 
     #[test]
     fn filter_by_price_works() {
-        assert_eq!(2 + 2, 4);
+        let requirements_a = Requirements {
+            trading_partners: vec![
+                "Charlie".to_string(), 
+                "Mike".to_string(), 
+                "Victor".to_string()],
+            energy_type: Some("green".to_string()),
+            energy: 25.0,
+            price: 14.0,
+        };
+    
+        let requirements_b = Requirements {
+            trading_partners: vec![
+                "Alice".to_string(), 
+                "Bob".to_string(), 
+                "Eve".to_string()],
+            energy_type: Some("coal".to_string()),
+            energy: 40.0,
+            price: 15.0,
+        };
+
+        let base_bid_offer_a = BaseBidOffer {
+            id: "a".to_string(),
+            time: Utc.timestamp(100200, 0),
+            original_price: 12.0,
+            price: 14.0,
+            energy: 25.0,
+            attributes: Attributes { energy_type: Some("coal".to_string()) },
+            requirements: vec![requirements_a],
+        };
+
+        let base_bid_offer_b = BaseBidOffer {
+            id: "b".to_string(),
+            time: Utc.timestamp(100500, 0),
+            original_price: 11.0,
+            price: 15.0,
+            energy: 40.0,
+            attributes: Attributes { energy_type: Some("green".to_string()) },
+            requirements: vec![requirements_b],
+        };
+
+        let mut base_bid_offer_vec = Vec::new();
+        base_bid_offer_vec.push(base_bid_offer_a.clone());
+        base_bid_offer_vec.push(base_bid_offer_b);
+        let mut expected = Vec::new();
+        expected.push(base_bid_offer_a);
+
+        assert_eq!(
+            base_bid_offer_vec.filter_offers_bids_by_requirement_price(14.0), 
+            expected);
+        assert_ne!(
+            base_bid_offer_vec.filter_offers_bids_by_requirement_price(15.0), 
+            expected);
     }
 }

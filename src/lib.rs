@@ -17,11 +17,11 @@ struct Requirements {
     price: f64,
 }
 
-trait Bid {
+trait BidFunctions {
     // functions unique to Bids - TODO
 }
 
-trait Offer {
+trait OfferFunctions {
     // functions unique to Offers - TODO
 }
 
@@ -37,11 +37,27 @@ pub struct BaseBidOffer {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Bid {
+    buyer: String,
+    energy_rate: f64,
+    energy: f64,
+    id: i8,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Offer {
+    seller: String,
+    energy_rate: f64,
+    energy: f64,
+    id: i8,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BidOfferMatch {
     market_id: String,
-    bids: Vec<u8>,
+    bids: Vec<Bid>,
     selected_energy: f64,
-    offers: Vec<u8>,
+    offers: Vec<Offer>,
     trade_rate: f64,
 }
 

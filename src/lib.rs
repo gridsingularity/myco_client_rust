@@ -1,5 +1,7 @@
 use serde::{Serialize, Deserialize};
-use chrono::{Utc, TimeZone, DateTime};
+use chrono::{Utc, DateTime};
+mod pay_as_bid;
+use crate::pay_as_bid::BidOfferMatch;
 
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -34,31 +36,6 @@ pub struct BaseBidOffer {
     energy: f64,
     attributes: Attributes,
     requirements: Vec<Requirements>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Bid {
-    buyer: String,
-    energy_rate: f64,
-    energy: f64,
-    id: i8,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Offer {
-    seller: String,
-    energy_rate: f64,
-    energy: f64,
-    id: i8,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct BidOfferMatch {
-    market_id: String,
-    bids: Vec<Bid>,
-    selected_energy: f64,
-    offers: Vec<Offer>,
-    trade_rate: f64,
 }
 
 pub type BidOfferMatchVec = Vec<BidOfferMatch>;

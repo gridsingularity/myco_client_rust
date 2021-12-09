@@ -1,18 +1,15 @@
 extern crate redis;
-use redis::{Client, Commands, Connection, RedisResult};
-use std::thread;
 mod redis_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = redis::Client::open("redis://localhost:6379").unwrap();
-    let mut conn = client.get_connection().unwrap();
+    let channel = String::from("external-myco/*/");
 
-    if let Err(error) = redis_subscriber::subscribe(String::from("external-myco/*/offers-bids/response/")) {
+    if let Err(error) = redis_subscriber::subscribe(channel.clone()) {
         println!("{:?}", error);
         panic!("{:?}", error);
     } else {
-        println!("connected to queue");
+        println!("subscribed to channel: {}", channel);
     }
 
     Ok(())

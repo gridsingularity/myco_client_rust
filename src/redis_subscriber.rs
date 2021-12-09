@@ -1,7 +1,6 @@
 extern crate redis;
 
 use std::error::Error;
-use redis::{ControlFlow, PubSubCommands};
 
 pub fn subscribe(channel: String) -> Result<(), Box<dyn Error>> {
     let _ = tokio::spawn(async move {

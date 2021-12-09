@@ -2,7 +2,7 @@ extern crate redis;
 
 use std::error::Error;
 
-pub fn subscribe(channel: String) -> Result<(), Box<dyn Error>> {
+pub fn psubscribe(channel: String) -> Result<(), Box<dyn Error>> {
     let _ = tokio::spawn(async move {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
 

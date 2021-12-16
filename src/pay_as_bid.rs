@@ -1,38 +1,40 @@
 use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, FixedOffset};
 
 const FLOATING_POINT_TOLERANCE: f32 = 0.00001;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Bid {
-    r#type: String,
-    id: String,
-    energy: f32,
-    energy_rate: f32,
-    original_price: f32,
-    time_slot: DateTime<Utc>,
-    attributes: Option<String>,
-    requirements: Option<String>,
-    buyer_origin: String,
-    buyer_origin_id: String,
-    buyer_id: String,
-    buyer: String,
+    pub r#type: String,
+    pub id: String,
+    pub energy: f32,
+    pub energy_rate: f32,
+    pub original_price: f32,
+    pub time_slot: Option<DateTime<FixedOffset>>,
+    pub attributes: Option<String>,
+    pub requirements: Option<String>,
+    pub buyer_origin: String,
+    pub buyer_origin_id: String,
+    pub buyer_id: String,
+    pub buyer: String,
+    pub creation_time: Option<DateTime<FixedOffset>>,
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Offer {
-    r#type: String,
-    id: String,
-    energy: f32,
-    energy_rate: f32,
-    original_price: f32,
-    time_slot: DateTime<Utc>,
-    attributes: Option<String>,
-    requirements: Option<String>,
-    seller_origin: String,
-    seller_origin_id: String,
-    seller_id: String,
-    seller: String,
+    pub r#type: String,
+    pub id: String,
+    pub energy: f32,
+    pub energy_rate: f32,
+    pub original_price: f32,
+    pub time_slot: Option<DateTime<FixedOffset>>,
+    pub creation_time: Option<DateTime<FixedOffset>>,
+    pub attributes: Option<String>,
+    pub requirements: Option<String>,
+    pub seller_origin: String,
+    pub seller_origin_id: String,
+    pub seller_id: String,
+    pub seller: String,
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]

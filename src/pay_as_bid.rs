@@ -53,15 +53,19 @@ pub struct MatchingData {
 }
 
 pub trait GetMatchesRecommendations {
-    fn get_matches_recommendations(&self, mut matching_data: MatchingData) -> Vec<BidOfferMatch> {
+    fn get_matches_recommendations(&mut self) -> Vec<BidOfferMatch>;
+}
+
+impl GetMatchesRecommendations for MatchingData {
+    fn get_matches_recommendations(&mut self) -> Vec<BidOfferMatch> {
         let mut bid_offer_pairs = Vec::new();
 
-        matching_data.bids.sort_by(|a, b| b.energy_rate.partial_cmp(&a.energy_rate).unwrap());
-        matching_data.offers.sort_by(|a, b| b.energy_rate.partial_cmp(&a.energy_rate).unwrap());
+        self.bids.sort_by(|a, b| b.energy_rate.partial_cmp(&a.energy_rate).unwrap());
+        self.offers.sort_by(|a, b| b.energy_rate.partial_cmp(&a.energy_rate).unwrap());
 
         let mut already_selected_bids = Vec::new();
-        for offer in matching_data.offers.clone() {
-            for bid in matching_data.bids.clone() {
+        for offer in self.offers.clone() {
+            for bid in self.bids.clone() {
                 if already_selected_bids.contains(&bid.id) || offer.seller == bid.buyer {
                     continue;
                 }
@@ -82,8 +86,4 @@ pub trait GetMatchesRecommendations {
         }
         bid_offer_pairs
     }
-}
-
-impl GetMatchesRecommendations for MatchingData {
-
 }

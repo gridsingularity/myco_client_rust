@@ -1,10 +1,11 @@
 extern crate redis;
-use crate::pay_as_bid::{Bid, Offer, MatchingData};
+use crate::pay_as_bid::{Bid, Offer, MatchingData, GetMatchesRecommendations};
 use serde_json::{Result, Value, Map};
 use std::error::Error;
 use chrono::{NaiveDateTime};
 
 pub fn value_to_str(value: &Value) -> String {
+    /// Helper function to convert the serde Value to String
     match value.as_str() {
         Some(..) => value.as_str().unwrap().to_string(),
         None => String::new(),
@@ -12,6 +13,7 @@ pub fn value_to_str(value: &Value) -> String {
 }
 
 pub fn value_to_f32(value: &Value) -> f32 {
+    /// Helper function to convert the serde Value to f32
     match value.as_f64() {
         Some(..) => value.as_f64().unwrap() as f32,
         None => 0 as f32,
@@ -19,6 +21,7 @@ pub fn value_to_f32(value: &Value) -> f32 {
 }
 
 pub fn value_to_datetime(value: &Value) -> Option<NaiveDateTime> {
+    /// Helper function to convert the serde Value to NaiveDateTime
     match value.as_str() {
         Some(..) => match NaiveDateTime::parse_from_str(value.as_str().unwrap(), "%Y-%m-%dT%H:%M:%S") {
             Ok(datetime) => Some(datetime),
@@ -29,7 +32,7 @@ pub fn value_to_datetime(value: &Value) -> Option<NaiveDateTime> {
 }
 
 pub fn read_bids(orders: &Value) -> Vec<Bid> {
-    /// Create an array of Bid structs from the Array
+    /// Create an array of Bid structs from the serde Value
     let mut bids_list = Vec::new();
     for bid in orders.as_array().unwrap() {
         let bid_struct = Bid{
@@ -53,7 +56,7 @@ pub fn read_bids(orders: &Value) -> Vec<Bid> {
 }
 
 pub fn read_offers(orders: &Value) -> Vec<Offer> {
-    /// Create an array of Offers from the Array
+    /// Create an array of Offers from the serde Value
     let mut offers_list = Vec::new();
     for offer in orders.as_array().unwrap() {
         let offer_struct = Offer{
@@ -88,10 +91,10 @@ pub fn process_market_id_for_pay_as_bid(market_id: &str, obj: &Value) {
                 offers_list = read_offers(orders);
             }
         }
-        let matching_data = MatchingData{bids: bids_list, offers: offers_list};
+        let mut matching_data = MatchingData{bids: bids_list, offers: offers_list};
         println!("{:?}", matching_data);
         // TODO - run the bids and offers list through the pay as bid
-        // get_matches_recommendations(matching_data);
+        matching_data.get_matches_recommendations();
         // TODO - publish the recommendations to the appropriate channel
     }
 }

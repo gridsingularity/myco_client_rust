@@ -2,7 +2,7 @@ extern crate redis;
 use crate::pay_as_bid::{Bid, Offer, MatchingData};
 use serde_json::{Result, Value, Map};
 use std::error::Error;
-use chrono::{DateTime, FixedOffset};
+use chrono::{NaiveDateTime};
 
 pub fn value_to_str(value: &Value) -> String {
     match value.as_str() {
@@ -18,9 +18,9 @@ pub fn value_to_f32(value: &Value) -> f32 {
     }
 }
 
-pub fn value_to_datetime(value: &Value) -> Option<DateTime<FixedOffset>> {
+pub fn value_to_datetime(value: &Value) -> Option<NaiveDateTime> {
     match value.as_str() {
-        Some(..) => match DateTime::parse_from_rfc3339(value.as_str().unwrap()) {
+        Some(..) => match NaiveDateTime::parse_from_str(value.as_str().unwrap(), "%Y-%m-%dT%H:%M:%S") {
             Ok(datetime) => Some(datetime),
             Err(e) => None,
         },

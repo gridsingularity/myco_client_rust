@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use chrono::{DateTime, FixedOffset};
+use chrono::{NaiveDateTime};
 
 const FLOATING_POINT_TOLERANCE: f32 = 0.00001;
 
@@ -10,14 +10,14 @@ pub struct Bid {
     pub energy: f32,
     pub energy_rate: f32,
     pub original_price: f32,
-    pub time_slot: Option<DateTime<FixedOffset>>,
     pub attributes: Option<String>,
     pub requirements: Option<String>,
     pub buyer_origin: String,
     pub buyer_origin_id: String,
     pub buyer_id: String,
     pub buyer: String,
-    pub creation_time: Option<DateTime<FixedOffset>>,
+    pub time_slot: Option<NaiveDateTime>,
+    pub creation_time: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -27,14 +27,14 @@ pub struct Offer {
     pub energy: f32,
     pub energy_rate: f32,
     pub original_price: f32,
-    pub time_slot: Option<DateTime<FixedOffset>>,
-    pub creation_time: Option<DateTime<FixedOffset>>,
     pub attributes: Option<String>,
     pub requirements: Option<String>,
     pub seller_origin: String,
     pub seller_origin_id: String,
     pub seller_id: String,
     pub seller: String,
+    pub time_slot: Option<NaiveDateTime>,
+    pub creation_time: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]

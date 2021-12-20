@@ -1,36 +1,102 @@
 extern crate redis;
-use crate::pay_as_bid::{Bid, Offer, MatchingData};
+use crate::pay_as_bid::{Bid, Offer, MatchingData, GetMatchesRecommendations};
 use serde_json::{Result, Value, Map};
 use std::error::Error;
+use chrono::{NaiveDateTime};
 
-pub fn read_bids(bids_offers: &Value) -> Vec<Bid> {
-    /// Create an array of Bid structs from the Array
+pub fn value_to_str(value: &Value) -> String {
+    /// Helper function to convert the serde Value to String
+    match value.as_str() {
+        Some(..) => value.as_str().unwrap().to_string(),
+        None => String::new(),
+    }
+}
+
+pub fn value_to_f32(value: &Value) -> f32 {
+    /// Helper function to convert the serde Value to f32
+    match value.as_f64() {
+        Some(..) => value.as_f64().unwrap() as f32,
+        None => 0 as f32,
+    }
+}
+
+pub fn value_to_datetime(value: &Value) -> Option<NaiveDateTime> {
+    /// Helper function to convert the serde Value to NaiveDateTime
+    match value.as_str() {
+        Some(..) => match NaiveDateTime::parse_from_str(value.as_str().unwrap(), "%Y-%m-%dT%H:%M:%S") {
+            Ok(datetime) => Some(datetime),
+            Err(e) => None,
+        },
+        None => None,
+    }
+}
+
+pub fn read_bids(orders: &Value) -> Vec<Bid> {
+    /// Create an array of Bid structs from the serde Value
     let mut bids_list = Vec::new();
+    for bid in orders.as_array().unwrap() {
+        let bid_struct = Bid{
+            r#type: value_to_str(&bid["type"]),
+            id: value_to_str(&bid["id"]),
+            energy: value_to_f32(&bid["energy"]),
+            energy_rate: value_to_f32(&bid["energy_rate"]),
+            original_price: value_to_f32(&bid["original_price"]),
+            attributes: Some(value_to_str(&bid["attributes"])),
+            requirements: Some(value_to_str(&bid["requirements"])),
+            buyer_origin: value_to_str(&bid["buyer_origin"]),
+            buyer_origin_id: value_to_str(&bid["buyer_origin_id"]),
+            buyer_id: value_to_str(&bid["buyer_id"]),
+            buyer: value_to_str(&bid["buyer"]),
+            time_slot: value_to_datetime(&bid["time_slot"]),
+            creation_time: value_to_datetime(&bid["creation_time"]),
+        };
+        bids_list.push(bid_struct);
+    }
     bids_list
 }
 
-pub fn read_offers(bids_offers: &Value) -> Vec<Offer> {
-    /// Create an array of Offers from the Array
+pub fn read_offers(orders: &Value) -> Vec<Offer> {
+    /// Create an array of Offers from the serde Value
     let mut offers_list = Vec::new();
+    for offer in orders.as_array().unwrap() {
+        let offer_struct = Offer{
+            r#type: value_to_str(&offer["type"]),
+            id: value_to_str(&offer["id"]),
+            energy: value_to_f32(&offer["energy"]),
+            energy_rate: value_to_f32(&offer["energy_rate"]),
+            original_price: value_to_f32(&offer["original_price"]),
+            attributes: Some(value_to_str(&offer["attributes"])),
+            requirements: Some(value_to_str(&offer["requirements"])),
+            seller_origin: value_to_str(&offer["seller_origin"]),
+            seller_origin_id: value_to_str(&offer["seller_origin_id"]),
+            seller_id: value_to_str(&offer["seller_id"]),
+            seller: value_to_str(&offer["seller"]),
+            time_slot: value_to_datetime(&offer["time_slot"]),
+            creation_time: value_to_datetime(&offer["creation_time"]),
+        };
+        offers_list.push(offer_struct);
+    }
     offers_list
 }
 
 pub fn process_market_id_for_pay_as_bid(market_id: &str, obj: &Value) {
     /// Create a MatchingData Struct for the pay as bid algorithm
-    println!("Market ID {} and Object {:?}", market_id, obj);
     for (timestamp, obj) in obj.as_object().unwrap().iter() {
         let mut bids_list = Vec::new();
         let mut offers_list = Vec::new();
-        for (key, bids_offers) in obj.as_object().unwrap().iter() {
+        for (key, orders) in obj.as_object().unwrap().iter() {
             if key == "bids" {
-                bids_list = read_bids(bids_offers);
+                bids_list = read_bids(orders);
+            } else if key == "offers" {
+                offers_list = read_offers(orders);
             } else {
-                offers_list = read_offers(bids_offers);
+                panic!("Unable to process market id: key not in ['bids', 'offers'].")
             }
         }
-        let matching_data = MatchingData{bids: bids_list, offers: offers_list};
+        let mut matching_data = MatchingData{bids: bids_list, offers: offers_list};
+        println!("{:?}", matching_data);
         // TODO - run the bids and offers list through the pay as bid
-        // get_matches_recommendations(matching_data);
+        matching_data.get_matches_recommendations();
         // TODO - publish the recommendations to the appropriate channel
     }
 }
@@ -43,7 +109,6 @@ pub fn unwrap_offers_bids_response(payload: &str) -> Value {
     let value: Value = serde_json::from_str(&payload).unwrap();
     for (key, obj) in value.as_object().unwrap().iter() {
         if key == "bids_offers" {
-            println!("Market ID: {}", key); // TODO - remove this line
             for (market_id, obj) in obj.as_object().unwrap().iter() {
                 process_market_id_for_pay_as_bid(market_id, obj);
             }

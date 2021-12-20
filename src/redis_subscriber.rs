@@ -87,8 +87,10 @@ pub fn process_market_id_for_pay_as_bid(market_id: &str, obj: &Value) {
         for (key, orders) in obj.as_object().unwrap().iter() {
             if key == "bids" {
                 bids_list = read_bids(orders);
-            } else {
+            } else if key == "offers" {
                 offers_list = read_offers(orders);
+            } else {
+                panic!("Unable to process market id: key not in ['bids', 'offers'].")
             }
         }
         let mut matching_data = MatchingData{bids: bids_list, offers: offers_list};

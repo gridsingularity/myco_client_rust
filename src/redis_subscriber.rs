@@ -93,9 +93,10 @@ pub fn process_market_id_for_pay_as_bid(obj: &Value) {
             }
         }
         let mut matching_data = MatchingData{bids: bids_list, offers: offers_list};
-        println!("{:?}", matching_data);
         // TODO - run the bids and offers list through the pay as bid
-        matching_data.get_matches_recommendations();
+        let algorithm_result = matching_data.get_matches_recommendations();
+        // println!("ALGORITHM RESULT: {:?}", algorithm_result);
+        // TODO - add tests for the result 
         // TODO - publish the recommendations to the appropriate channel
     }
 }

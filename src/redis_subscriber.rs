@@ -95,7 +95,7 @@ pub fn process_market_id_for_pay_as_bid(obj: &Value) {
         let mut matching_data = MatchingData{bids: bids_list, offers: offers_list};
         // TODO - run the bids and offers list through the pay as bid
         let algorithm_result = matching_data.get_matches_recommendations();
-        // println!("ALGORITHM RESULT: {:?}", algorithm_result);
+        println!("ALGORITHM RESULT: {:?}", algorithm_result);
         // TODO - add tests for the result 
         // TODO - publish the recommendations to the appropriate channel
     }
@@ -127,7 +127,8 @@ pub fn unwrap_recommendations_response(payload: &str) -> Value {
 pub fn psubscribe(channel: String) -> Result<()>
 {
     let _ = tokio::spawn(async move {
-        let client = redis::Client::open("redis://localhost:6379").unwrap();
+        // without docker: let client = redis::Client::open("redis://localhost:6379").unwrap();
+        let client = redis::Client::open("redis://host.docker.internal:6379").unwrap();
 
         let mut con = client.get_connection().unwrap();
         let mut pubsub = con.as_pubsub();

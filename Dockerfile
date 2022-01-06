@@ -4,8 +4,7 @@ FROM rust:1.49 as build
 RUN USER=root cargo new --bin myco_client_rust
 WORKDIR /myco_client_rust
 
-# copy over your manifests
-COPY ./Cargo.lock ./Cargo.lock
+# copy manifests
 COPY ./Cargo.toml ./Cargo.toml
 
 # cache dependencies

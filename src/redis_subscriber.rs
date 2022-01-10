@@ -1,5 +1,6 @@
 extern crate redis;
 use crate::pay_as_bid::{Bid, Offer, MatchingData, GetMatchesRecommendations};
+use std::env;
 use serde_json::{Result, Value};
 use chrono::{NaiveDateTime};
 
@@ -127,8 +128,10 @@ pub fn unwrap_recommendations_response(payload: &str) -> Value {
 pub fn psubscribe(channel: String) -> Result<()>
 {
     let _ = tokio::spawn(async move {
-        // without docker: let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let client = redis::Client::open("redis://host.docker.internal:6379").unwrap();
+        let localhost = env::var("LOCALHOST").unwrap_or("none".to_string());
+        let dockerhost = env::var("DOCKERHOST").unwrap_or("none".to_string());
+        
+        let client = redis::Client::open("redis://localhost:6379").unwrap();
 
         let mut con = client.get_connection().unwrap();
         let mut pubsub = con.as_pubsub();

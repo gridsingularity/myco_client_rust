@@ -129,12 +129,11 @@ pub fn unwrap_tick_response(payload: &str) -> Value {
     // When a message from the tick channel is received,
     // we check the slot completion %
     let value: Value = serde_json::from_str(&payload).unwrap();
-    // for (key, obj) in value.as_object().unwrap().iter() {
-    //     if key == "slot_completion" {
-    //         println!("SLOT COMPLETION: {:?}", &obj);
-    //     }
-    // }
-    println!("EVENT: {:?}", &value);
+    for (key, obj) in value.as_object().unwrap().iter() {
+        if key == "slot_completion" {
+            println!("SLOT COMPLETION: {:?}", &obj);
+        }
+    }
     value
 }
 

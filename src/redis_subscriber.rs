@@ -138,18 +138,20 @@ pub fn unwrap_tick_response(payload: &str) -> Value {
     value
 }
 
-pub fn psubscribe(channel: String) -> Result<()>
+pub fn psubscribe(channels: Vec<String>) -> Result<()>
 {
     let _ = tokio::spawn(async move {
-        let localhost = env::var("LOCALHOST").unwrap_or("none".to_string());
-        let dockerhost = env::var("DOCKERHOST").unwrap_or("none".to_string());
-        
-        let client = redis::Client::open("redis://localhost:6379").unwrap();
+        let redis_url = env::var("REDIS_URL").unwrap_or("localhost".to_string());
+
+        let client = redis::Client::open(
+            format!("redis://{}:6379", redis_url)).unwrap();
 
         let mut con = client.get_connection().unwrap();
         let mut pubsub = con.as_pubsub();
 
-        pubsub.psubscribe(channel).unwrap();
+        for channel in channels {
+            pubsub.psubscribe(channel).unwrap();
+        }
 
         loop {
             let msg = pubsub.get_message().unwrap();

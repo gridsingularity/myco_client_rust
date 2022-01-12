@@ -158,7 +158,7 @@ pub fn psubscribe(channel: String) -> Result<()>
             let _unwrapped_payload = match channel_name {
                 "external-myco//offers-bids/response/" => unwrap_offers_bids_response(&payload),
                 "external-myco//recommendations/" => unwrap_recommendations_response(&payload),
-                "external-myco//events" => unwrap_tick_response(&payload),
+                "external-myco//events/" => unwrap_tick_response(&payload),
                 _ => unwrap_recommendations_response(&payload),
             };
         }

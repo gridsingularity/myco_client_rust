@@ -6,7 +6,7 @@ mod pay_as_bid;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let orders_response_channel = String::from("external-myco/*/offers-bids/response/");
     let recommendations_channel = String::from("external-myco/*/recommendations");
-    let tick_channel = String::from("external-myco/*/events");
+    let tick_channel = String::from("external-myco/*/events/");
 
     if let Err(error) = redis_subscriber::psubscribe(orders_response_channel.clone()) {
         println!("{:?}", error);

@@ -96,7 +96,7 @@ pub fn process_market_id_for_pay_as_bid(obj: &Value) {
         let mut matching_data = MatchingData{bids: bids_list, offers: offers_list};
         // TODO - run the bids and offers list through the pay as bid
         let algorithm_result = matching_data.get_matches_recommendations();
-        println!("ALGORITHM RESULT: {:?}", algorithm_result);
+        //println!("ALGORITHM RESULT: {:?}", algorithm_result);
         // TODO - add tests for the result 
         // TODO - publish the recommendations to the appropriate channel
     }
@@ -125,6 +125,19 @@ pub fn unwrap_recommendations_response(payload: &str) -> Value {
     value
 }
 
+pub fn unwrap_tick_response(payload: &str) -> Value {
+    // When a message from the tick channel is received,
+    // we check the slot completion %
+    let value: Value = serde_json::from_str(&payload).unwrap();
+    // for (key, obj) in value.as_object().unwrap().iter() {
+    //     if key == "slot_completion" {
+    //         println!("SLOT COMPLETION: {:?}", &obj);
+    //     }
+    // }
+    println!("EVENT: {:?}", &value);
+    value
+}
+
 pub fn psubscribe(channel: String) -> Result<()>
 {
     let _ = tokio::spawn(async move {
@@ -145,6 +158,7 @@ pub fn psubscribe(channel: String) -> Result<()>
             let _unwrapped_payload = match channel_name {
                 "external-myco//offers-bids/response/" => unwrap_offers_bids_response(&payload),
                 "external-myco//recommendations/" => unwrap_recommendations_response(&payload),
+                "external-myco//events" => unwrap_tick_response(&payload),
                 _ => unwrap_recommendations_response(&payload),
             };
         }

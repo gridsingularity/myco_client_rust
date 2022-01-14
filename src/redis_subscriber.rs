@@ -96,7 +96,7 @@ pub fn process_market_id_for_pay_as_bid(obj: &Value) {
         let mut matching_data = MatchingData{bids: bids_list, offers: offers_list};
         // TODO - run the bids and offers list through the pay as bid
         let algorithm_result = matching_data.get_matches_recommendations();
-        println!("ALGORITHM RESULT: {:?}", algorithm_result);
+        //println!("ALGORITHM RESULT: {:?}", algorithm_result);
         // TODO - add tests for the result 
         // TODO - publish the recommendations to the appropriate channel
     }
@@ -125,18 +125,32 @@ pub fn unwrap_recommendations_response(payload: &str) -> Value {
     value
 }
 
-pub fn psubscribe(channel: String) -> Result<()>
+pub fn unwrap_tick_response(payload: &str) -> Value {
+    // When a message from the tick channel is received,
+    // we check the slot completion %
+    let value: Value = serde_json::from_str(&payload).unwrap();
+    for (key, obj) in value.as_object().unwrap().iter() {
+        if key == "slot_completion" {
+            println!("SLOT COMPLETION: {:?}", &obj);
+        }
+    }
+    value
+}
+
+pub fn psubscribe(channels: Vec<String>) -> Result<()>
 {
     let _ = tokio::spawn(async move {
-        let localhost = env::var("LOCALHOST").unwrap_or("none".to_string());
-        let dockerhost = env::var("DOCKERHOST").unwrap_or("none".to_string());
-        
-        let client = redis::Client::open("redis://localhost:6379").unwrap();
+        let redis_url = env::var("REDIS_URL").unwrap_or("localhost".to_string());
+
+        let client = redis::Client::open(
+            format!("redis://{}:6379", redis_url)).unwrap();
 
         let mut con = client.get_connection().unwrap();
         let mut pubsub = con.as_pubsub();
 
-        pubsub.psubscribe(channel).unwrap();
+        for channel in channels {
+            pubsub.psubscribe(channel).unwrap();
+        }
 
         loop {
             let msg = pubsub.get_message().unwrap();
@@ -145,6 +159,7 @@ pub fn psubscribe(channel: String) -> Result<()>
             let _unwrapped_payload = match channel_name {
                 "external-myco//offers-bids/response/" => unwrap_offers_bids_response(&payload),
                 "external-myco//recommendations/" => unwrap_recommendations_response(&payload),
+                "external-myco//events/" => unwrap_tick_response(&payload),
                 _ => unwrap_recommendations_response(&payload),
             };
         }

@@ -1,3 +1,5 @@
+use std::cmp;
+use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use chrono::{NaiveDateTime};
 
@@ -40,9 +42,9 @@ pub struct Offer {
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct BidOfferMatch {
     market_id: String,
-    bids: Vec<Bid>,
+    bids: Bid,
     selected_energy: f32,
-    offers: Vec<Offer>,
+    offers: Offer,
     trade_rate: f32,
 }
 
@@ -50,6 +52,7 @@ pub struct BidOfferMatch {
 pub struct MatchingData {
     pub bids: Vec<Bid>,
     pub offers: Vec<Offer>,
+    pub market_id: String
 }
 
 pub trait GetMatchesRecommendations {
@@ -63,24 +66,56 @@ impl GetMatchesRecommendations for MatchingData {
         self.bids.sort_by(|a, b| b.energy_rate.partial_cmp(&a.energy_rate).unwrap());
         self.offers.sort_by(|a, b| b.energy_rate.partial_cmp(&a.energy_rate).unwrap());
 
-        let mut already_selected_bids = Vec::new();
+        let mut available_order_energy: HashMap<String,f32> = HashMap::new();
         for offer in self.offers.clone() {
             for bid in self.bids.clone() {
-                if already_selected_bids.contains(&bid.id) || offer.seller == bid.buyer {
+                if offer.seller == bid.buyer {
                     continue;
                 }
-                if offer.energy_rate - bid.energy_rate <= FLOATING_POINT_TOLERANCE {
-                    already_selected_bids.push(bid.id.clone());
-                    let selected_energy = bid.energy.min(offer.energy);
-                    let new_bid_offer_match = BidOfferMatch {
-                            market_id: bid.id.clone(),
-                            bids: vec![bid.clone()],
-                            selected_energy: selected_energy,
-                            offers: vec![offer.clone()],
-                            trade_rate: bid.energy_rate,
-                    };
-                    bid_offer_pairs.push(new_bid_offer_match);
-                    break;
+
+                if offer.energy_rate - bid.energy_rate > FLOATING_POINT_TOLERANCE {
+                    continue;
+                }
+
+                if !available_order_energy.contains_key(bid.id.as_str()) {
+                    available_order_energy.insert(bid.id.clone(), bid.energy)
+                }
+                if !available_order_energy.contains_key(offer.id.as_str()) {
+                    available_order_energy.insert(offer.id.clone(), offer.energy)
+                }
+
+                let offer_energy = available_order_energy.get(
+                    offer.id.as_str()).unwrap().clone();
+                let bid_energy = available_order_energy.get(
+                    bid.id.as_str()).unwrap().clone();
+
+                let selected_energy = cmp::min(offer_energy, bid_energy);
+
+                if selected_energy <= FLOATING_POINT_TOLERANCE {
+                    continue;
+                }
+
+                available_order_energy.insert(bid.id.clone(), bid_energy - selected_energy);
+                available_order_energy.insert(offer.id.clone(),
+                                              offer_energy - selected_energy);
+
+                assert!(available_order_energy.values().iter().all(
+                    |energy| energy >= -FLOATING_POINT_TOLERANCE));
+
+                let new_bid_offer_match = BidOfferMatch {
+                        market_id: self.market_id.clone(),
+                        bids: bid.clone(),
+                        selected_energy,
+                        trade_rate: bid.energy_rate,
+                        offers: offer.clone(),
+                };
+                bid_offer_pairs.push(new_bid_offer_match);
+
+                if let Some(offer_residual_energy) = available_order_energy.get(
+                    offer.id.as_str()) {
+                    if *offer_residual_energy <= FLOATING_POINT_TOLERANCE {
+                        break;
+                    }
                 }
             }
         }

@@ -84,16 +84,21 @@ pub fn process_market_id_for_pay_as_bid(obj: &Value) {
     for (_timestamp, obj) in obj.as_object().unwrap().iter() {
         let mut bids_list = Vec::new();
         let mut offers_list = Vec::new();
+        let mut market_id = String::new();
         for (key, orders) in obj.as_object().unwrap().iter() {
             if key == "bids" {
                 bids_list = read_bids(orders);
             } else if key == "offers" {
                 offers_list = read_offers(orders);
+            } else if key == "market_id" {
+                market_id = orders.to_string();
             } else {
                 panic!("Unable to process market id: key not in ['bids', 'offers'].")
             }
         }
-        let mut matching_data = MatchingData{bids: bids_list, offers: offers_list};
+        let mut matching_data = MatchingData{
+            bids: bids_list, offers: offers_list, market_id
+        };
         // TODO - run the bids and offers list through the pay as bid
         let algorithm_result = matching_data.get_matches_recommendations();
         //println!("ALGORITHM RESULT: {:?}", algorithm_result);

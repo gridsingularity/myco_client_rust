@@ -1,4 +1,3 @@
-use std::cmp;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use chrono::{NaiveDateTime};
@@ -42,9 +41,9 @@ pub struct Offer {
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct BidOfferMatch {
     market_id: String,
-    bids: Bid,
+    bid: Bid,
     selected_energy: f32,
-    offers: Offer,
+    offer: Offer,
     trade_rate: f32,
 }
 
@@ -78,10 +77,10 @@ impl GetMatchesRecommendations for MatchingData {
                 }
 
                 if !available_order_energy.contains_key(bid.id.as_str()) {
-                    available_order_energy.insert(bid.id.clone(), bid.energy)
+                    available_order_energy.insert(bid.id.clone(), bid.energy).unwrap();
                 }
                 if !available_order_energy.contains_key(offer.id.as_str()) {
-                    available_order_energy.insert(offer.id.clone(), offer.energy)
+                    available_order_energy.insert(offer.id.clone(), offer.energy).unwrap();
                 }
 
                 let offer_energy = available_order_energy.get(
@@ -89,7 +88,7 @@ impl GetMatchesRecommendations for MatchingData {
                 let bid_energy = available_order_energy.get(
                     bid.id.as_str()).unwrap().clone();
 
-                let selected_energy = cmp::min(offer_energy, bid_energy);
+                let selected_energy = offer_energy.min(bid_energy);
 
                 if selected_energy <= FLOATING_POINT_TOLERANCE {
                     continue;
@@ -99,15 +98,15 @@ impl GetMatchesRecommendations for MatchingData {
                 available_order_energy.insert(offer.id.clone(),
                                               offer_energy - selected_energy);
 
-                assert!(available_order_energy.values().iter().all(
-                    |energy| energy >= -FLOATING_POINT_TOLERANCE));
+                assert!(available_order_energy.values().all(
+                    |energy| *energy >= -FLOATING_POINT_TOLERANCE));
 
                 let new_bid_offer_match = BidOfferMatch {
                         market_id: self.market_id.clone(),
-                        bids: bid.clone(),
+                        bid: bid.clone(),
                         selected_energy,
                         trade_rate: bid.energy_rate,
-                        offers: offer.clone(),
+                        offer: offer.clone(),
                 };
                 bid_offer_pairs.push(new_bid_offer_match);
 

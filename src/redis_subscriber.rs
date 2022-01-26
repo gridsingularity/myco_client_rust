@@ -93,7 +93,7 @@ pub fn process_market_id_for_pay_as_bid(obj: &Value) {
             } else if key == "market_id" {
                 market_id = orders.to_string();
             } else {
-                panic!("Unable to process market id: key not in ['bids', 'offers'].")
+                panic!("Unable to process market id: key not in ['bids', 'offers', 'market_id'].")
             }
         }
         let mut matching_data = MatchingData{

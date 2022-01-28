@@ -136,7 +136,10 @@ pub fn unwrap_tick_response(payload: &str) -> Value {
     let value: Value = serde_json::from_str(&payload).unwrap();
     for (key, obj) in value.as_object().unwrap().iter() {
         if key == "slot_completion" {
-            println!("SLOT COMPLETION: {:?}", &obj);
+            let slot_percent_str: &str = &obj.as_str().unwrap();
+            let length = slot_percent_str.len();
+            let slot_percent_int: i32 = slot_percent_str[..length-1].parse().unwrap();
+            println!("{:?}", &slot_percent_int);
         }
     }
     value

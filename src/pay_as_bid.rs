@@ -77,10 +77,10 @@ impl GetMatchesRecommendations for MatchingData {
                 }
 
                 if !available_order_energy.contains_key(bid.id.as_str()) {
-                    available_order_energy.insert(bid.id.clone(), bid.energy).unwrap();
+                    available_order_energy.insert(bid.id.clone(), bid.energy).unwrap_or(0.0);
                 }
                 if !available_order_energy.contains_key(offer.id.as_str()) {
-                    available_order_energy.insert(offer.id.clone(), offer.energy).unwrap();
+                    available_order_energy.insert(offer.id.clone(), offer.energy).unwrap_or(0.0);
                 }
 
                 let offer_energy = available_order_energy.get(

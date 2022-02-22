@@ -126,6 +126,7 @@ pub fn unwrap_offers_bids_response(payload: &str) -> Value {
 pub fn unwrap_recommendations_response(payload: &str) -> Value {
     // When a message from the recommendations channel is received,
     // it is sent to the verifier function - TODO
+    // Will be sent to TradeSettlement pallet, rejected matches are sent back by the OCW - TODO
     let value: Value = serde_json::from_str(&payload).unwrap();
     value
 }
@@ -140,6 +141,9 @@ pub fn unwrap_tick_response(payload: &str) -> Value {
             let length = slot_percent_str.len();
             let slot_percent_int: i32 = slot_percent_str[..length-1].parse().unwrap();
             println!("{:?}", &slot_percent_int);
+            if (slot_percent_int > 33 && slot_percent_int < 66) || (slot_percent_int > 66) {
+                // TODO publish to offers-bids channel 
+            }
         }
     }
     value

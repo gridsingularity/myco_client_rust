@@ -1,8 +1,11 @@
 extern crate redis;
+
 use crate::pay_as_bid::{Bid, Offer, MatchingData, GetMatchesRecommendations};
 use std::env;
+
 use serde_json::{Result, Value};
 use chrono::{NaiveDateTime};
+use crate::redis::Commands;
 
 pub fn value_to_str(value: &Value) -> String {
     // Helper function to convert the serde Value to String
@@ -101,7 +104,7 @@ pub fn process_market_id_for_pay_as_bid(obj: &Value) {
         };
         // TODO - run the bids and offers list through the pay as bid
         let algorithm_result = matching_data.get_matches_recommendations();
-        //println!("ALGORITHM RESULT: {:?}", algorithm_result);
+        println!("ALGORITHM RESULT: {:?}", algorithm_result);
         // TODO - add tests for the result 
         // TODO - publish the recommendations to the appropriate channel
     }
@@ -131,7 +134,7 @@ pub fn unwrap_recommendations_response(payload: &str) -> Value {
     value
 }
 
-pub fn unwrap_tick_response(payload: &str) -> Value {
+pub fn unwrap_tick_response(payload: &str, client: &redis::Client) -> Value {
     // When a message from the tick channel is received,
     // we check the slot completion %
     let value: Value = serde_json::from_str(&payload).unwrap();
@@ -140,9 +143,9 @@ pub fn unwrap_tick_response(payload: &str) -> Value {
             let slot_percent_str: &str = &obj.as_str().unwrap();
             let length = slot_percent_str.len();
             let slot_percent_int: i32 = slot_percent_str[..length-1].parse().unwrap();
-            println!("{:?}", &slot_percent_int);
             if (slot_percent_int > 33 && slot_percent_int < 66) || (slot_percent_int > 66) {
-                // TODO publish to offers-bids channel 
+                client.get_connection().unwrap().publish::<String, String, redis::Value>(
+                    "external-myco//offers-bids/".to_string(), "{}".to_string());
             }
         }
     }
@@ -158,8 +161,8 @@ pub fn psubscribe(channels: Vec<String>) -> Result<()>
             format!("redis://{}:6379", redis_url)).unwrap();
 
         let mut con = client.get_connection().unwrap();
-        let mut pubsub = con.as_pubsub();
 
+        let mut pubsub = con.as_pubsub();
         for channel in channels {
             pubsub.psubscribe(channel).unwrap();
         }
@@ -171,7 +174,7 @@ pub fn psubscribe(channels: Vec<String>) -> Result<()>
             let _unwrapped_payload = match channel_name {
                 "external-myco//offers-bids/response/" => unwrap_offers_bids_response(&payload),
                 "external-myco//recommendations/" => unwrap_recommendations_response(&payload),
-                "external-myco//events/" => unwrap_tick_response(&payload),
+                "external-myco//events/" => unwrap_tick_response(&payload, &client),
                 _ => unwrap_recommendations_response(&payload),
             };
         }

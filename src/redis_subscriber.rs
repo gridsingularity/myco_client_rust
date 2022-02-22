@@ -143,7 +143,7 @@ pub fn unwrap_tick_response(payload: &str, client: &redis::Client) -> Value {
             let slot_percent_str: &str = &obj.as_str().unwrap();
             let length = slot_percent_str.len();
             let slot_percent_int: i32 = slot_percent_str[..length-1].parse().unwrap();
-            if (slot_percent_int > 33 && slot_percent_int < 66) || (slot_percent_int > 66) {
+            if (slot_percent_int > 33 && slot_percent_int < 66) || (slot_percent_int >= 66) {
                 client.get_connection().unwrap().publish::<String, String, redis::Value>(
                     "external-myco//offers-bids/".to_string(), "{}".to_string());
             }

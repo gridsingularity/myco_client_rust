@@ -1,8 +1,24 @@
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, Serializer};
 use chrono::{NaiveDateTime};
 
 const FLOATING_POINT_TOLERANCE: f32 = 0.00001;
+
+pub fn serialize_datetime<S>(
+    datetime: &Option<NaiveDateTime>,
+    serializer: S
+) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer {
+    const FORMAT: &'static str = "%Y-%m-%dT%H:%M";
+    match datetime {
+        Some(datetime) => {
+            let s = format!("{}", datetime.format(FORMAT));
+            serializer.serialize_str(&s)
+        },
+        None => serializer.serialize_none()
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Bid {
@@ -17,6 +33,7 @@ pub struct Bid {
     pub buyer_origin_id: String,
     pub buyer_id: String,
     pub buyer: String,
+    #[serde(serialize_with = "serialize_datetime")]
     pub time_slot: Option<NaiveDateTime>,
     pub creation_time: Option<NaiveDateTime>,
 }
@@ -34,6 +51,7 @@ pub struct Offer {
     pub seller_origin_id: String,
     pub seller_id: String,
     pub seller: String,
+    #[serde(serialize_with = "serialize_datetime")]
     pub time_slot: Option<NaiveDateTime>,
     pub creation_time: Option<NaiveDateTime>,
 }
@@ -41,6 +59,8 @@ pub struct Offer {
 #[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct BidOfferMatch {
     market_id: String,
+    #[serde(serialize_with = "serialize_datetime")]
+    time_slot: Option<NaiveDateTime>,
     bid: Bid,
     selected_energy: f32,
     offer: Offer,
@@ -103,6 +123,7 @@ impl GetMatchesRecommendations for MatchingData {
 
                 let new_bid_offer_match = BidOfferMatch {
                         market_id: self.market_id.clone(),
+                        time_slot: offer.time_slot,
                         bid: bid.clone(),
                         selected_energy,
                         trade_rate: bid.energy_rate,

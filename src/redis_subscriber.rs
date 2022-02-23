@@ -1,9 +1,9 @@
 extern crate redis;
 
-use crate::pay_as_bid::{Bid, Offer, MatchingData, GetMatchesRecommendations};
+use crate::pay_as_bid::{Bid, Offer, MatchingData, GetMatchesRecommendations, BidOfferMatch};
 use std::env;
 
-use serde_json::{Result, Value};
+use serde_json::{Result, Value, json};
 use chrono::{NaiveDateTime};
 use crate::redis::Commands;
 
@@ -38,7 +38,7 @@ pub fn read_bids(orders: &Value) -> Vec<Bid> {
     // Create an array of Bid structs from the serde Value
     let mut bids_list = Vec::new();
     for bid in orders.as_array().unwrap() {
-        let bid_struct = Bid{
+        let bid_struct = Bid {
             r#type: value_to_str(&bid["type"]),
             id: value_to_str(&bid["id"]),
             energy: value_to_f32(&bid["energy"]),
@@ -62,7 +62,7 @@ pub fn read_offers(orders: &Value) -> Vec<Offer> {
     // Create an array of Offers from the serde Value
     let mut offers_list = Vec::new();
     for offer in orders.as_array().unwrap() {
-        let offer_struct = Offer{
+        let offer_struct = Offer {
             r#type: value_to_str(&offer["type"]),
             id: value_to_str(&offer["id"]),
             energy: value_to_f32(&offer["energy"]),
@@ -82,35 +82,34 @@ pub fn read_offers(orders: &Value) -> Vec<Offer> {
     offers_list
 }
 
-pub fn process_market_id_for_pay_as_bid(obj: &Value) {
+pub fn process_market_id_for_pay_as_bid(obj: &Value, market_id: &str) -> Vec<BidOfferMatch> {
+    let mut matches = Vec::new();
     // Create a MatchingData Struct for the pay as bid algorithm
     for (_timestamp, obj) in obj.as_object().unwrap().iter() {
         let mut bids_list = Vec::new();
         let mut offers_list = Vec::new();
-        let mut market_id = String::new();
         for (key, orders) in obj.as_object().unwrap().iter() {
             if key == "bids" {
                 bids_list = read_bids(orders);
             } else if key == "offers" {
                 offers_list = read_offers(orders);
-            } else if key == "market_id" {
-                market_id = orders.to_string();
             } else {
                 panic!("Unable to process market id: key not in ['bids', 'offers', 'market_id'].")
             }
         }
-        let mut matching_data = MatchingData{
-            bids: bids_list, offers: offers_list, market_id
+        let mut matching_data = MatchingData {
+            bids: bids_list,
+            offers: offers_list,
+            market_id: market_id.to_string(),
         };
-        // TODO - run the bids and offers list through the pay as bid
         let algorithm_result = matching_data.get_matches_recommendations();
-        println!("ALGORITHM RESULT: {:?}", algorithm_result);
+        matches.extend(algorithm_result)
         // TODO - add tests for the result 
-        // TODO - publish the recommendations to the appropriate channel
     }
+    matches
 }
 
-pub fn unwrap_offers_bids_response(payload: &str) -> Value {
+pub fn unwrap_offers_bids_response(payload: &str, client: &redis::Client) {
     // When a message from the bids_offers channel is received,
     // it extracts the market ids as keys to iterate over the
     // corresponding sets of bids and offers and trigger the
@@ -118,23 +117,27 @@ pub fn unwrap_offers_bids_response(payload: &str) -> Value {
     let value: Value = serde_json::from_str(&payload).unwrap();
     for (key, obj) in value.as_object().unwrap().iter() {
         if key == "bids_offers" {
+            let mut matches = Vec::new();
             for (_market_id, obj) in obj.as_object().unwrap().iter() {
-                process_market_id_for_pay_as_bid(obj);
+                matches.extend(process_market_id_for_pay_as_bid(obj, _market_id.as_str()));
             }
+
+            client.get_connection().unwrap().publish::<String, String, redis::Value>(
+                "external-myco//recommendations/".to_string(),
+                json!({"recommended_matches": matches}).to_string(),
+            ).expect("Cannot publish Redis message to recommendations channel.");
         }
     };
-    value
 }
 
-pub fn unwrap_recommendations_response(payload: &str) -> Value {
+pub fn unwrap_recommendations_response(payload: &str) {
     // When a message from the recommendations channel is received,
     // it is sent to the verifier function - TODO
     // Will be sent to TradeSettlement pallet, rejected matches are sent back by the OCW - TODO
-    let value: Value = serde_json::from_str(&payload).unwrap();
-    value
+    let _value: Value = serde_json::from_str(&payload).unwrap();
 }
 
-pub fn unwrap_tick_response(payload: &str, client: &redis::Client) -> Value {
+pub fn unwrap_tick_response(payload: &str, client: &redis::Client) {
     // When a message from the tick channel is received,
     // we check the slot completion %
     let value: Value = serde_json::from_str(&payload).unwrap();
@@ -142,14 +145,14 @@ pub fn unwrap_tick_response(payload: &str, client: &redis::Client) -> Value {
         if key == "slot_completion" {
             let slot_percent_str: &str = &obj.as_str().unwrap();
             let length = slot_percent_str.len();
-            let slot_percent_int: i32 = slot_percent_str[..length-1].parse().unwrap();
+            let slot_percent_int: i32 = slot_percent_str[..length - 1].parse().unwrap();
             if (slot_percent_int > 33 && slot_percent_int < 66) || (slot_percent_int > 66) {
                 client.get_connection().unwrap().publish::<String, String, redis::Value>(
-                    "external-myco//offers-bids/".to_string(), "{}".to_string());
+                    "external-myco//offers-bids/".to_string(), "{}".to_string()
+                ).expect("Cannot publish Redis message to offers-bids channel.");
             }
         }
     }
-    value
 }
 
 pub fn psubscribe(channels: Vec<String>) -> Result<()>
@@ -171,8 +174,8 @@ pub fn psubscribe(channels: Vec<String>) -> Result<()>
             let msg = pubsub.get_message().unwrap();
             let payload: String = msg.get_payload().unwrap();
             let channel_name = msg.get_channel_name();
-            let _unwrapped_payload = match channel_name {
-                "external-myco//offers-bids/response/" => unwrap_offers_bids_response(&payload),
+            match channel_name {
+                "external-myco//offers-bids/response/" => unwrap_offers_bids_response(&payload, &client),
                 "external-myco//recommendations/" => unwrap_recommendations_response(&payload),
                 "external-myco//events/" => unwrap_tick_response(&payload, &client),
                 _ => unwrap_recommendations_response(&payload),

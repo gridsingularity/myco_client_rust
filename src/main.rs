@@ -1,6 +1,4 @@
-extern crate redis;
-mod redis_subscriber;
-mod pay_as_bid;
+use myco_client_rust::connectors::psubscribe;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -14,7 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         recommendations_channel.clone()
     ];
 
-    if let Err(error) = redis_subscriber::psubscribe(channels.clone()) {
+    if let Err(error) = psubscribe(channels.clone()) {
         println!("{:?}", error);
         panic!("{:?}", error);
     } else {

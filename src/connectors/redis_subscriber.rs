@@ -1,6 +1,5 @@
 use crate::algorithms::PayAsBid;
 use crate::primitives::{Bid, BidOfferMatch, MatchingData, Offer};
-use std::env;
 
 use serde_json::{Result, Value, json};
 use chrono::{NaiveDateTime};
@@ -155,13 +154,11 @@ pub fn unwrap_tick_response(payload: &str, client: &redis::Client) {
     }
 }
 
-pub fn psubscribe(channels: Vec<String>) -> Result<()>
+pub fn psubscribe(channels: Vec<String>, url: String) -> Result<()>
 {
     let _ = tokio::spawn(async move {
-        let redis_url = env::var("REDIS_URL").unwrap_or("localhost".to_string());
 
-        let client = redis::Client::open(
-            format!("redis://{}:6379", redis_url)).unwrap();
+        let client = redis::Client::open(url).unwrap();
 
         let mut con = client.get_connection().unwrap();
 

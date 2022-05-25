@@ -14,6 +14,6 @@ gsy-e run -t 60s -s 60m --setup myco_setup.external_myco --enable-external-conne
 
 In a third tab, run
 ```
-docker run --rm --name myco_client myco_client_rust
+docker run --rm --name myco_client myco_client_rust web2
 ```
 

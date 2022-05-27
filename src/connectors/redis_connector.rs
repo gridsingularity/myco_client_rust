@@ -156,7 +156,7 @@ pub fn unwrap_tick_response(payload: &str, client: &redis::Client) {
     }
 }
 
-pub async fn psubscribe(channels: Vec<String>, url: String) -> Result<(), Error> {
+pub async fn redis_subscribe(channels: Vec<String>, url: String) -> Result<(), Error> {
 
         let client = redis::Client::open(url)?;
 

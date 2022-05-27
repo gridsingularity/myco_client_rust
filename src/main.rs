@@ -1,5 +1,5 @@
 use clap::Parser;
-use myco_client_rust::connectors::psubscribe;
+use myco_client_rust::connectors::{redis_subscribe, substrate_subscribe};
 use myco_client_rust::utils::{Cli, Commands};
 use text_colorizer::*;
 
@@ -28,7 +28,7 @@ async fn main() {
 
             let url = format!("{}:{}", orderbook_host, orderbook_port);
 
-            if let Err(error) = psubscribe(channels.clone(), url).await {
+            if let Err(error) = redis_subscribe(channels.clone(), url).await {
                 eprintln!("{} - {:?}", "Error".red().bold(), error);
                 panic!("{:?}", error);
             }
@@ -36,10 +36,14 @@ async fn main() {
         Commands::Web3 {
             orderbook_host: _,
             orderbook_port: _,
-            node_host: _,
-            node_port: _
-        } =>  {
-            //TODO
-        }
+            node_host,
+            node_port
+        } => async {
+            let node_url = format!("{}:{}", node_host, node_port);
+            if let Err(error) = substrate_subscribe(node_url).await {
+                eprintln!("{} - {:?}", "Error".red().bold(), error);
+                panic!("{:?}", error);
+            }
+        }.await
     }
 }

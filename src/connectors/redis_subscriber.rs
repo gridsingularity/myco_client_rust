@@ -1,9 +1,11 @@
 use crate::algorithms::PayAsBid;
 use crate::primitives::{Bid, BidOfferMatch, MatchingData, Offer};
 
-use serde_json::{Result, Value, json};
+use anyhow::{Error, Result};
+use serde_json::{Value, json};
 use chrono::{NaiveDateTime};
 use redis::Commands;
+
 
 pub fn value_to_str(value: &Value) -> String {
     // Helper function to convert the serde Value to String
@@ -154,17 +156,15 @@ pub fn unwrap_tick_response(payload: &str, client: &redis::Client) {
     }
 }
 
-pub fn psubscribe(channels: Vec<String>, url: String) -> Result<()>
-{
-    let _ = tokio::spawn(async move {
+pub async fn psubscribe(channels: Vec<String>, url: String) -> Result<(), Error> {
 
-        let client = redis::Client::open(url).unwrap();
+        let client = redis::Client::open(url)?;
 
-        let mut con = client.get_connection().unwrap();
+        let mut con = client.get_connection()?;
 
         let mut pubsub = con.as_pubsub();
         for channel in channels {
-            pubsub.psubscribe(channel).unwrap();
+            pubsub.psubscribe(channel)?;
         }
 
         loop {
@@ -178,7 +178,4 @@ pub fn psubscribe(channels: Vec<String>, url: String) -> Result<()>
                 _ => unwrap_recommendations_response(&payload),
             };
         }
-    });
-
-    Ok(())
 }

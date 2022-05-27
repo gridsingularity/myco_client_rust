@@ -1,85 +1,13 @@
+use crate::primitives::{BidOfferMatch, MatchingData};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize, Serializer};
-use chrono::{NaiveDateTime};
-
 const FLOATING_POINT_TOLERANCE: f32 = 0.00001;
 
-pub fn serialize_datetime<S>(
-    datetime: &Option<NaiveDateTime>,
-    serializer: S
-) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer {
-    const FORMAT: &'static str = "%Y-%m-%dT%H:%M";
-    match datetime {
-        Some(datetime) => {
-            let s = format!("{}", datetime.format(FORMAT));
-            serializer.serialize_str(&s)
-        },
-        None => serializer.serialize_none()
-    }
+pub trait PayAsBid {
+    fn pay_as_bid(&mut self) -> Vec<BidOfferMatch>;
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct Bid {
-    pub r#type: String,
-    pub id: String,
-    pub energy: f32,
-    pub energy_rate: f32,
-    pub original_price: f32,
-    pub attributes: Option<String>,
-    pub requirements: Option<String>,
-    pub buyer_origin: String,
-    pub buyer_origin_id: String,
-    pub buyer_id: String,
-    pub buyer: String,
-    #[serde(serialize_with = "serialize_datetime")]
-    pub time_slot: Option<NaiveDateTime>,
-    pub creation_time: Option<NaiveDateTime>,
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct Offer {
-    pub r#type: String,
-    pub id: String,
-    pub energy: f32,
-    pub energy_rate: f32,
-    pub original_price: f32,
-    pub attributes: Option<String>,
-    pub requirements: Option<String>,
-    pub seller_origin: String,
-    pub seller_origin_id: String,
-    pub seller_id: String,
-    pub seller: String,
-    #[serde(serialize_with = "serialize_datetime")]
-    pub time_slot: Option<NaiveDateTime>,
-    pub creation_time: Option<NaiveDateTime>,
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct BidOfferMatch {
-    market_id: String,
-    #[serde(serialize_with = "serialize_datetime")]
-    time_slot: Option<NaiveDateTime>,
-    bid: Bid,
-    selected_energy: f32,
-    offer: Offer,
-    trade_rate: f32,
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct MatchingData {
-    pub bids: Vec<Bid>,
-    pub offers: Vec<Offer>,
-    pub market_id: String
-}
-
-pub trait GetMatchesRecommendations {
-    fn get_matches_recommendations(&mut self) -> Vec<BidOfferMatch>;
-}
-
-impl GetMatchesRecommendations for MatchingData {
-    fn get_matches_recommendations(&mut self) -> Vec<BidOfferMatch> {
+impl PayAsBid for MatchingData {
+    fn pay_as_bid(&mut self) -> Vec<BidOfferMatch> {
         let mut bid_offer_pairs = Vec::new();
 
         self.bids.sort_by(|a, b| b.energy_rate.partial_cmp(&a.energy_rate).unwrap());

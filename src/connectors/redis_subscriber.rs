@@ -1,11 +1,10 @@
-extern crate redis;
-
-use crate::pay_as_bid::{Bid, Offer, MatchingData, GetMatchesRecommendations, BidOfferMatch};
+use crate::algorithms::PayAsBid;
+use crate::primitives::{Bid, BidOfferMatch, MatchingData, Offer};
 use std::env;
 
 use serde_json::{Result, Value, json};
 use chrono::{NaiveDateTime};
-use crate::redis::Commands;
+use redis::Commands;
 
 pub fn value_to_str(value: &Value) -> String {
     // Helper function to convert the serde Value to String
@@ -102,9 +101,9 @@ pub fn process_market_id_for_pay_as_bid(obj: &Value, market_id: &str) -> Vec<Bid
             offers: offers_list,
             market_id: market_id.to_string(),
         };
-        let algorithm_result = matching_data.get_matches_recommendations();
+        let algorithm_result = matching_data.pay_as_bid();
         matches.extend(algorithm_result)
-        // TODO - add tests for the result 
+        // TODO - add tests for the result
     }
     matches
 }
@@ -146,7 +145,8 @@ pub fn unwrap_tick_response(payload: &str, client: &redis::Client) {
             let slot_percent_str: &str = &obj.as_str().unwrap();
             let length = slot_percent_str.len();
             let slot_percent_int: i32 = slot_percent_str[..length - 1].parse().unwrap();
-            if (slot_percent_int > 33 && slot_percent_int < 66) || (slot_percent_int >= 66) {
+            // TODO: change this fast fix with the proper logic
+            if slot_percent_int > 33 {
                 client.get_connection().unwrap().publish::<String, String, redis::Value>(
                     "external-myco//offers-bids/".to_string(), "{}".to_string()
                 ).expect("Cannot publish Redis message to offers-bids channel.");

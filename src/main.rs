@@ -1,26 +1,45 @@
+use clap::Parser;
 use myco_client_rust::connectors::psubscribe;
+use myco_client_rust::utils::{Cli, Commands};
+use text_colorizer::*;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let orders_response_channel = String::from("external-myco/*/offers-bids/response/");
-    let recommendations_channel = String::from("external-myco/*/recommendations");
-    let tick_channel = String::from("external-myco/*/events/");
+async fn main() {
+    let cli = Cli::parse();
 
-    let channels = vec![
-        tick_channel.clone(),
-        orders_response_channel.clone(),
-        recommendations_channel.clone()
-    ];
+    // You can check for the existence of subcommands, and if found use their
+    // matches just as you would the top level cmd
+    match &cli.command {
+        Commands::Web2 {
+            orderbook_host,
+            orderbook_port
+        } => async {
+            let orders_response_channel = String::from("external-myco/*/offers-bids/response/");
+            let recommendations_channel = String::from("external-myco/*/recommendations");
+            let tick_channel = String::from("external-myco/*/events/");
 
-    if let Err(error) = psubscribe(channels.clone()) {
-        println!("{:?}", error);
-        panic!("{:?}", error);
-    } else {
-        println!("subscribed to the following channels:");
-        for channel in channels {
-            println!("{}", channel);
+            let channels = vec![
+                tick_channel.clone(),
+                orders_response_channel.clone(),
+                recommendations_channel.clone(),
+            ];
+
+            eprintln!("Connecting to: {}:{}", orderbook_host.green(), orderbook_port.green());
+
+            let url = format!("{}:{}", orderbook_host, orderbook_port);
+
+            if let Err(error) = psubscribe(channels.clone(), url).await {
+                eprintln!("{} - {:?}", "Error".red().bold(), error);
+                panic!("{:?}", error);
+            }
+        }.await,
+        Commands::Web3 {
+            orderbook_host: _,
+            orderbook_port: _,
+            node_host: _,
+            node_port: _
+        } =>  {
+            //TODO
         }
     }
-
-    Ok(())
 }

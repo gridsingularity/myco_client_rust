@@ -16,13 +16,15 @@ name = "myco_client_rust"
 
 [dependencies]
 anyhow = "1"
+async-recursion = "1"
 chrono = { version = "0.4", features = ["serde", "rustc-serialize"]}
 clap = { version = "3", features = ["derive"]}
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "full", "bit-vec"] }
 futures = "0"
+reqwest = { version = "0", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
-subxt = "0.20"
+subxt = "0.21"
 text-colorizer = "1"
 tokio = { version = "*", features = ["full"] }
 uuid = { version = "0.8.2", features = ["v4"] }

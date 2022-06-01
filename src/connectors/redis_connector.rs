@@ -6,7 +6,6 @@ use serde_json::{Value, json};
 use chrono::{NaiveDateTime};
 use redis::Commands;
 
-
 pub fn value_to_str(value: &Value) -> String {
     // Helper function to convert the serde Value to String
     match value.as_str() {

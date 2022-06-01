@@ -8,6 +8,8 @@ pub struct Cli {
     pub command: Commands,
     #[clap(short, long)]
     pub verbose: bool,
+    #[clap(short, long, default_value_t = 3)]
+    pub max_attempts: u8,
 }
 
 #[derive(Subcommand)]

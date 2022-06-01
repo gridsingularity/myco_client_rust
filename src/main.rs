@@ -1,6 +1,7 @@
 use clap::Parser;
 use myco_client_rust::connectors::{redis_subscribe, substrate_subscribe};
 use myco_client_rust::utils::{Cli, Commands};
+use std::{thread, time};
 use text_colorizer::*;
 
 #[tokio::main]
@@ -34,15 +35,26 @@ async fn main() {
             }
         }.await,
         Commands::Web3 {
-            orderbook_host: _,
-            orderbook_port: _,
+            orderbook_host,
+            orderbook_port,
             node_host,
             node_port
         } => async {
+            let orderbook_url = format!("{}:{}/{}", orderbook_host, orderbook_port, "orders");
             let node_url = format!("{}:{}", node_host, node_port);
-            if let Err(error) = substrate_subscribe(node_url).await {
-                eprintln!("{} - {:?}", "Error".red().bold(), error);
-                panic!("{:?}", error);
+            if let Err(error) = substrate_subscribe(orderbook_url.clone(), node_url.clone()).await {
+                eprintln!("{} - {:?}", "Error".bright_red().bold(), error);
+                let mut attempt: u8 = 1;
+                while attempt <= cli.max_attempts {
+                    eprintln!("{}\n{}: {}", "Retrying...".yellow(), "Attempt".yellow(), attempt.to_string().bright_white().bold());
+                    let two_seconds = time::Duration::from_millis(2000);
+                    thread::sleep(two_seconds);
+                    if let Err(error) = substrate_subscribe(orderbook_url.clone(), node_url.clone()).await {
+                        eprintln!("{} - {:?}", "Error".bright_red().bold(), error);
+                        attempt += 1;
+                    }
+                }
+                //panic!("{:?}", error);
             }
         }.await
     }

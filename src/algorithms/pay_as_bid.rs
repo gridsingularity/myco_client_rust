@@ -1,4 +1,4 @@
-use crate::primitives::{BidOfferMatch, MatchingData};
+use crate::primitives::web2::{BidOfferMatch, MatchingData};
 use std::collections::HashMap;
 const FLOATING_POINT_TOLERANCE: f32 = 0.00001;
 

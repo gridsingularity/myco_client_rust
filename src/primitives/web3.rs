@@ -74,6 +74,24 @@ pub struct Bid {
     pub bid_component: OrderComponent,
 }
 
+impl From<Order> for Bid {
+    fn from(order: Order) -> Self {
+        match order {
+            Order::Bid(bid) => bid,
+            _ => panic!("Expected Order::Bid"),
+        }
+    }
+}
+
+impl From<OrderSchema> for Bid {
+    fn from(order: OrderSchema) -> Self {
+        match order.order {
+            Order::Bid(bid) => bid,
+            _ => panic!("Expected Order::Bid"),
+        }
+    }
+}
+
 /// Offer (Ask) order struct
 #[derive(Serialize, Deserialize, Debug, Encode, Clone, PartialEq)]
 pub struct Offer {
@@ -84,4 +102,22 @@ pub struct Offer {
     pub creation_time: Option<u64>,
     pub attributes: Vec<Vec<u8>>,
     pub offer_component: OrderComponent,
+}
+
+impl From<Order> for Offer {
+    fn from(order: Order) -> Self {
+        match order {
+            Order::Offer(offer) => offer,
+            _ => panic!("Expected Order::Offer"),
+        }
+    }
+}
+
+impl From<OrderSchema> for Offer {
+    fn from(order: OrderSchema) -> Self {
+        match order.order {
+            Order::Offer(offer) => offer,
+            _ => panic!("Expected Order::Offer"),
+        }
+    }
 }

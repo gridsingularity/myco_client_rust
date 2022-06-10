@@ -28,6 +28,10 @@ subxt = "0.21"
 sp-keyring = "6.0.0"
 text-colorizer = "1"
 tokio = { version = "*", features = ["full"] }
+tracing = { version = "0.1", features = ["log"] }
+tracing-bunyan-formatter = "0.3"
+tracing-log = "0.1"
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 uuid = { version = "0.8.2", features = ["v4"] }
 
 [dependencies.redis]

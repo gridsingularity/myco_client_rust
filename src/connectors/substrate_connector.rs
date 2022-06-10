@@ -1,4 +1,4 @@
-use crate::primitives::web3::{Bid, Offer, Order, OrderSchema, OrderStatus};
+use crate::primitives::web3::{Bid, MatchingData, Offer, Order, OrderSchema, OrderStatus};
 use anyhow::{Error, Result};
 use async_recursion::async_recursion;
 use sp_keyring::AccountKeyring;
@@ -10,13 +10,15 @@ use subxt::{
     ClientBuilder, DefaultConfig, PairSigner, PolkadotExtrinsicParams, SubstrateExtrinsicParams,
 };
 use text_colorizer::*;
+use tracing::{error, info};
+use crate::algorithms::PayAsBid;
 
 #[subxt::subxt(runtime_metadata_path = "metadata.scale")]
 pub mod gsy_node {}
 
 #[async_recursion]
 pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Result<(), Error> {
-    eprintln!("{} {}", "Connecting to".green(), node_url.green().bold());
+    info!("{} {}", "Connecting to".green(), node_url.green().bold());
 
     let api = ClientBuilder::new()
         .set_url(node_url.clone())
@@ -30,19 +32,24 @@ pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Res
     let orderbook_url = Arc::new(Mutex::new(orderbook_url));
     let node_url = Arc::new(Mutex::new(node_url.clone()));
 
+    let matches = Arc::new(Mutex::new(Vec::new()));
+
     while let Some(Ok(block)) = gsy_blocks_events.next().await {
-        eprintln!("Block {:?} finalized: {:?}", block.number, block.hash());
+        info!("Block {:?} finalized: {:?}", block.number, block.hash());
 
         if (block.number as u64) % 4 == 0 {
-            eprintln!("{}", "Starting matching cycle".green());
+            info!("{}", "Starting matching cycle".green());
 
             let orderbook_url_clone = Arc::clone(&orderbook_url);
             let node_url_clone = Arc::clone(&node_url);
 
+            let matches_clone_one = Arc::clone(&matches);
+            let matches_clone_two = Arc::clone(&matches);
+
             if let Err(error) = tokio::task::spawn(async move {
                 let orderbook_url_clone = orderbook_url_clone.lock().unwrap().to_string();
 
-                eprintln!(
+                info!(
                     "{} {}",
                     "Fetching orders from".green(),
                     orderbook_url_clone.clone().green().bold()
@@ -51,8 +58,8 @@ pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Res
                 let res = reqwest::get(orderbook_url_clone)
                     .await
                     .expect("Failed to get orderbook");
-                eprintln!("Response: {:?} {}", res.version(), res.status());
-                eprintln!("Headers: {:#?}\n", res.headers());
+                info!("Response: {:?} {}", res.version(), res.status());
+                info!("Headers: {:#?}\n", res.headers());
 
                 let body = res
                     .json::<Vec<OrderSchema>>()
@@ -75,12 +82,20 @@ pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Res
                     })
                     .map(|order| order.into())
                     .collect();
-                eprintln!("{} - {:?}", "Open Bid".blue(), open_bid);
-                eprintln!("{} - {:?}", "Open Offer".magenta(), open_offer);
+                info!("{} - {:?}", "Open Bid".blue(), open_bid);
+                info!("{} - {:?}", "Open Offer".magenta(), open_offer);
+                let mut matching_data = MatchingData {
+                    bids: open_bid,
+                    offers: open_offer,
+                    market_id: 1,
+                };
+                let bid_offer_matches = matching_data.pay_as_bid();
+                matches_clone_one.lock().unwrap().extend(bid_offer_matches);
+                info!("{} - {:?}", "Matches".green(), matches_clone_one.lock().unwrap());
             })
             .await
             {
-                eprintln!(
+                error!(
                     "{} - {:?}",
                     "Error while fetching the orderbook".red(),
                     error
@@ -89,10 +104,11 @@ pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Res
 
             // TODO: Modify Extrinsic to SettleTrade
             tokio::task::spawn(async move {
+                info!("{} - {:?}", "Settling following matches".green(), matches_clone_two.lock().unwrap());
                 let node_url_clone = node_url_clone.lock().unwrap().to_string();
 
                 let signer = PairSigner::new(AccountKeyring::Alice.pair());
-                eprintln!("Signer: {:?}", signer.account_id());
+                info!("Signer: {:?}", signer.account_id());
                 let dest = AccountKeyring::Bob.to_account_id().into();
                 let api =
                     ClientBuilder::new()
@@ -129,19 +145,19 @@ pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Res
                         e
                     ));
 
-                eprintln!("Balance transfer success: {:?}", transfer_event);
+                info!("Balance transfer success: {:?}", transfer_event);
             });
         }
     }
-    eprintln!("{}", "Subscription dropped.".bright_red().bold());
+    error!("{}", "Subscription dropped.".bright_red().bold());
     loop {
-        eprintln!("{}", "Trying to reconnect...".yellow());
+        info!("{}", "Trying to reconnect...".yellow());
         let two_seconds = time::Duration::from_millis(2000);
         thread::sleep(two_seconds);
         let orderbook_url = orderbook_url.lock().unwrap().to_string();
         let node_url = node_url.lock().unwrap().to_string();
         if let Err(error) = substrate_subscribe(orderbook_url, node_url.clone()).await {
-            eprintln!("{} - {:?}", "Error".bright_red().bold(), error);
+            error!("{} - {:?}", "Error".bright_red().bold(), error);
         }
     }
 }

@@ -1,11 +1,10 @@
 use crate::algorithms::PayAsBid;
-use crate::primitives::{Bid, BidOfferMatch, MatchingData, Offer};
+use crate::primitives::web2::{Bid, BidOfferMatch, MatchingData, Offer};
 
 use anyhow::{Error, Result};
 use serde_json::{Value, json};
 use chrono::{NaiveDateTime};
 use redis::Commands;
-
 
 pub fn value_to_str(value: &Value) -> String {
     // Helper function to convert the serde Value to String

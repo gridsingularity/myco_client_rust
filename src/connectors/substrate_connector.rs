@@ -48,33 +48,11 @@ pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Res
                     orderbook_url_clone.clone().green().bold()
                 );
 
-                let res = reqwest::get(orderbook_url_clone)
-                    .await
-                    .expect("Failed to get orderbook");
-                eprintln!("Response: {:?} {}", res.version(), res.status());
-                eprintln!("Headers: {:#?}\n", res.headers());
+                let (open_bid, open_offer) =
+                    fetch_open_orders_from_orderbook_service(orderbook_url_clone)
+                        .await
+                        .unwrap_or_else(|e| panic!("Failed to fetch the open orders: {:?}", e));
 
-                let body = res
-                    .json::<Vec<OrderSchema>>()
-                    .await
-                    .expect("Failed to parse response");
-                let open_bid: Vec<Bid> = body
-                    .clone()
-                    .into_iter()
-                    .filter(|order| {
-                        order.status == OrderStatus::Open
-                            && matches!(order.order, Order::Bid { .. })
-                    })
-                    .map(|order| order.into())
-                    .collect();
-                let open_offer: Vec<Offer> = body
-                    .into_iter()
-                    .filter(|order| {
-                        order.status == OrderStatus::Open
-                            && matches!(order.order, Order::Offer { .. })
-                    })
-                    .map(|order| order.into())
-                    .collect();
                 eprintln!("{} - {:?}", "Open Bid".blue(), open_bid);
                 eprintln!("{} - {:?}", "Open Offer".magenta(), open_offer);
             })
@@ -144,4 +122,30 @@ pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Res
             eprintln!("{} - {:?}", "Error".bright_red().bold(), error);
         }
     }
+}
+
+async fn fetch_open_orders_from_orderbook_service(
+    url: String,
+) -> Result<(Vec<Bid>, Vec<Offer>), Error> {
+    let res = reqwest::get(url).await?;
+    eprintln!("Response: {:?} {}", res.version(), res.status());
+    eprintln!("Headers: {:#?}\n", res.headers());
+
+    let body = res.json::<Vec<OrderSchema>>().await?;
+    let open_bid: Vec<Bid> = body
+        .clone()
+        .into_iter()
+        .filter(|order| {
+            order.status == OrderStatus::Open && matches!(order.order, Order::Bid { .. })
+        })
+        .map(|order| order.into())
+        .collect();
+    let open_offer: Vec<Offer> = body
+        .into_iter()
+        .filter(|order| {
+            order.status == OrderStatus::Open && matches!(order.order, Order::Offer { .. })
+        })
+        .map(|order| order.into())
+        .collect();
+    Ok((open_bid, open_offer))
 }

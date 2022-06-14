@@ -2,7 +2,6 @@ use clap::Parser;
 use myco_client_rust::connectors::{redis_subscribe, substrate_subscribe};
 use myco_client_rust::utils::{Cli, Commands};
 use std::{thread, time};
-use text_colorizer::*;
 use tracing::{error, info};
 use myco_client_rust::utils::telemetry::{get_subscriber, init_subscriber};
 
@@ -30,12 +29,12 @@ async fn main() {
                 recommendations_channel.clone(),
             ];
 
-            info!("Connecting to: {}:{}", orderbook_host.green(), orderbook_port.green());
+            info!("Connecting to: {}:{}", orderbook_host, orderbook_port);
 
             let url = format!("{}:{}", orderbook_host, orderbook_port);
 
             if let Err(error) = redis_subscribe(channels.clone(), url).await {
-                error!("{} - {:?}", "Error".red().bold(), error);
+                error!("Error - {:?}", error);
                 panic!("{:?}", error);
             }
         }.await,
@@ -48,14 +47,14 @@ async fn main() {
             let orderbook_url = format!("{}:{}/{}", orderbook_host, orderbook_port, "orders");
             let node_url = format!("{}:{}", node_host, node_port);
             if let Err(error) = substrate_subscribe(orderbook_url.clone(), node_url.clone()).await {
-                info!("{} - {:?}", "Error".bright_red().bold(), error);
+                info!("Error - {:?}", error);
                 let mut attempt: u8 = 1;
                 while attempt <= cli.max_attempts {
-                    info!("{}\n{}: {}", "Retrying...".yellow(), "Attempt".yellow(), attempt.to_string().bright_white().bold());
+                    info!("Retrying...\nAttempt: {:}", attempt);
                     let two_seconds = time::Duration::from_millis(2000);
                     thread::sleep(two_seconds);
                     if let Err(error) = substrate_subscribe(orderbook_url.clone(), node_url.clone()).await {
-                        error!("{} - {:?}", "Error".bright_red().bold(), error);
+                        error!("Error - {:?}", error);
                         attempt += 1;
                     }
                 }

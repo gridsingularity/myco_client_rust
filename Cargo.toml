@@ -25,6 +25,7 @@ reqwest = { version = "0", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
 subxt = "0.21"
+sp-keyring = "6.0.0"
 text-colorizer = "1"
 tokio = { version = "*", features = ["full"] }
 uuid = { version = "0.8.2", features = ["v4"] }

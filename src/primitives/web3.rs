@@ -1,11 +1,11 @@
 use crate::algorithms::PayAsBid;
-use codec::Encode;
+use codec::{Encode, Decode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use subxt::sp_core::H256;
 use subxt::sp_runtime::traits::{BlakeTwo256, Hash};
 
-#[derive(Serialize, Deserialize, Debug, Encode, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone, PartialEq)]
 #[serde(tag = "type", content = "data")]
 pub enum Order {
     Bid(Bid),
@@ -18,7 +18,7 @@ impl Order {
     }
 }
 /// Order component struct
-#[derive(Serialize, Deserialize, Debug, Encode, Clone, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone, PartialEq, PartialOrd)]
 pub struct OrderComponent {
     pub energy: u32,
     pub energy_rate: u32,
@@ -27,7 +27,7 @@ pub struct OrderComponent {
     pub energy_type: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Encode, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct OrderSchema {
     pub _id: H256,
     pub status: OrderStatus,
@@ -65,7 +65,7 @@ impl Default for OrderStatus {
 }
 
 /// Bid order struct
-#[derive(Serialize, Deserialize, Debug, Encode, Clone, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone, PartialEq, PartialOrd)]
 pub struct Bid {
     pub buyer: String,
     pub uuid: u8,
@@ -95,7 +95,7 @@ impl From<OrderSchema> for Bid {
 }
 
 /// Offer (Ask) order struct
-#[derive(Serialize, Deserialize, Debug, Encode, Clone, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone, PartialEq, PartialOrd)]
 pub struct Offer {
     pub seller: String,
     pub uuid: u8,
@@ -124,7 +124,7 @@ impl From<OrderSchema> for Offer {
     }
 }
 
-#[derive(Debug, Encode, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct BidOfferMatch {
     pub market_id: u8,
     pub time_slot: u64,

@@ -13,9 +13,14 @@ use subxt::{
     ClientBuilder, DefaultConfig, PairSigner, PolkadotExtrinsicParams, SubstrateExtrinsicParams,
 };
 use tracing::{error, info};
+use subxt::sp_runtime::AccountId32;
+use futures::StreamExt;
+use codec::{Encode, Decode};
 
 #[subxt::subxt(runtime_metadata_path = "metadata.scale")]
 pub mod gsy_node {}
+
+use crate::connectors::substrate_connector::gsy_node::runtime_types::gsy_primitives::trades::BidOfferMatch as OtherBidOfferMatch;
 
 #[async_recursion]
 pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Result<(), Error> {
@@ -75,13 +80,15 @@ pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Res
                     matches_clone_one.lock().unwrap()
                 );
             })
-            .await
+                .await
             {
                 error!(
                     "Error while fetching the orderbook - {:?}",
                     error
                 );
             }
+
+
 
             tokio::task::spawn(async move {
                 info!(
@@ -92,9 +99,12 @@ pub async fn substrate_subscribe(orderbook_url: String, node_url: String) -> Res
                 let node_url_clone = node_url_clone.lock().unwrap().to_string();
                 let matches: Vec<BidOfferMatch> = matches_clone_two.lock().unwrap().clone();
 
+                let mut _matches_to_bytes = matches.encode();
+                let transcode_matches: Vec::<OtherBidOfferMatch<AccountId32, u64>> = Vec::<OtherBidOfferMatch<AccountId32, u64>>::decode(&mut &_matches_to_bytes[..]).unwrap();
+
                 if let Ok(()) = send_settle_trades_extrinsic(
                     node_url_clone,
-                    matches,
+                    transcode_matches,
                 ).await {
                     info!("Settling trades successful");
                 } else {
@@ -123,7 +133,8 @@ async fn fetch_open_orders_from_orderbook_service(
     info!("Response: {:?} {}", res.version(), res.status());
     info!("Headers: {:#?}\n", res.headers());
 
-    let body = res.json::<Vec<OrderSchema>>().await?;
+    let res_to_json = res.json::<Vec<Order>>().await?;
+    let body: Vec<OrderSchema> = res_to_json.into_iter().map(|order| OrderSchema::from(order)).collect();
     let open_bid: Vec<Bid> = body
         .clone()
         .into_iter()
@@ -144,11 +155,10 @@ async fn fetch_open_orders_from_orderbook_service(
 
 async fn send_settle_trades_extrinsic(
     url: String,
-    _matches: Vec<BidOfferMatch>,
+    _matches: Vec<OtherBidOfferMatch<AccountId32, u64>>,
 ) -> Result<(), Error> {
     let signer = PairSigner::new(AccountKeyring::Alice.pair());
     info!("Signer: {:?}", signer.account_id());
-    let dest = AccountKeyring::Bob.to_account_id().into();
     let api = ClientBuilder::new()
         .set_url(url)
         .build()
@@ -158,23 +168,23 @@ async fn send_settle_trades_extrinsic(
             PolkadotExtrinsicParams<DefaultConfig>,
         >>();
 
-    // TODO: Modify Extrinsic to SettleTrade
-    let balance_transfer = api
+    let order_transfer = api
         .tx()
-        .balances()
-        .transfer(dest, 10_000)?
-        .sign_and_submit_then_watch_default(&signer)
+        .trades_settlement()
+        .settle_trades(_matches)?;
+
+    let tx_hash = order_transfer.sign_and_submit_default(&signer).await?;
+    info!("signed order:{:?}", tx_hash);
+
+    let mut transfer_events = api
+        .events()
+        .subscribe()
         .await?
-        .wait_for_finalized_success()
-        .await?;
+        .filter_events::<(gsy_node::trades_settlement::events::TradeCleared,)>();
 
-    let transfer_event = balance_transfer
-        .find_first::<gsy_node::balances::events::Transfer>()?;
 
-    if let Some(event) = transfer_event {
-        info!("Trade successfully cleared: {:?}", event);
-    } else {
-        error!("Failed to clear the trade");
+    if let Some(transfer_event) = transfer_events.next().await {
+        info!("Balance transfer event: {transfer_event:?}");
     }
 
     Ok(())
